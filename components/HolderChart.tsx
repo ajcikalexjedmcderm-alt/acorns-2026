@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { HolderData } from '../types';
@@ -13,6 +12,7 @@ const HolderChart: React.FC<Props> = ({ data }) => {
   const [range, setRange] = useState<TimeRange>('1D');
 
   const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
     const now = new Date().getTime();
     let cutoff = 0;
     
@@ -25,15 +25,14 @@ const HolderChart: React.FC<Props> = ({ data }) => {
       default: return data;
     }
 
-    const filtered = data.filter(d => d.fullDate.getTime() > cutoff);
-    // Ensure we have at least 2 points for the chart to render properly
-    return filtered.length > 1 ? filtered : data.slice(-10);
+    const filtered = data.filter(d => d.fullDate && d.fullDate.getTime() > cutoff);
+    return filtered.length > 1 ? filtered : data.slice(-20);
   }, [data, range]);
 
   const rangeButtons: TimeRange[] = ['1h', '4h', '1D', '1W', '1M'];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl h-[400px] flex flex-col">
+    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold text-slate-200">Holder Growth History</h3>
         <div className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
@@ -52,7 +51,12 @@ const HolderChart: React.FC<Props> = ({ data }) => {
           ))}
         </div>
       </div>
-      <div className="flex-1 min-h-0">
+
+      {/* 修复关键点：
+          将原来的 flex-1 改为明确的 h-[320px]。
+          这解决了 "width(-1) and height(-1)" 的渲染报错。
+      */}
+      <div className="w-full h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
