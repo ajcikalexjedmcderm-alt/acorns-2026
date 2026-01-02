@@ -25,7 +25,6 @@ const HolderChart: React.FC<Props> = ({ data }) => {
       default: return data;
     }
 
-    // 过滤数据并确保有足够的点用于显示
     const filtered = data.filter(d => d.fullDate && d.fullDate.getTime() > cutoff);
     return filtered.length > 1 ? filtered : data.slice(-20);
   }, [data, range]);
@@ -33,7 +32,7 @@ const HolderChart: React.FC<Props> = ({ data }) => {
   const rangeButtons: TimeRange[] = ['1h', '4h', '1D', '1W', '1M'];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col">
+    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold text-slate-200">Holder Growth History</h3>
         <div className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
@@ -53,7 +52,7 @@ const HolderChart: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* 核心修复：直接使用内联 style 指定 350px 高度，彻底解决控制台报错 */}
+      {/* 强制内联样式，解决 width/height -1 报错 */}
       <div style={{ width: '100%', height: '350px', minHeight: '350px', position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -70,7 +69,6 @@ const HolderChart: React.FC<Props> = ({ data }) => {
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 10 }}
               dy={10}
-              interval="preserveStartEnd"
             />
             <YAxis 
               axisLine={false}
@@ -80,16 +78,13 @@ const HolderChart: React.FC<Props> = ({ data }) => {
               orientation="right"
             />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f1f5f9' }}
-              itemStyle={{ color: '#f59e0b' }}
-              labelStyle={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}
+              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
             />
             <Area 
               type="monotone" 
               dataKey="count" 
               stroke="#f59e0b" 
               strokeWidth={3}
-              fillOpacity={1} 
               fill="url(#colorCount)" 
               animationDuration={500}
             />
