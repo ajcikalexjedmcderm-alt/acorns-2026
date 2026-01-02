@@ -21,12 +21,17 @@ const CONCENTRATION_TIERS = {
 const createFlatHistory = (count: number): HolderData[] => {
   const data: HolderData[] = [];
   const baseDate = new Date();
+  // 模拟过去 24 小时的数据
   for (let i = 24; i >= 0; i--) {
     const d = new Date(baseDate.getTime() - (i * 60 * 60 * 1000));
+    // 关键点：给初始数据增加 -5 到 +5 的随机波动，让图表有起伏感
+    const randomFlux = Math.floor(Math.random() * 11) - 5;
+    const simulatedCount = count + randomFlux;
+
     data.push({
       timestamp: `${d.getHours().toString().padStart(2, '0')}:00`,
-      count: count,
-      change: 0,
+      count: simulatedCount,
+      change: i === 24 ? 0 : randomFlux,
       fullDate: d
     });
   }
