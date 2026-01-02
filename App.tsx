@@ -7,7 +7,7 @@ import GeminiAnalyst from './components/GeminiAnalyst';
 import { HolderData, Stats } from './types';
 import { fetchLatestHolderCount } from './services/gemini';
 
-const DEFAULT_START_COUNT = 3345;
+const DEFAULT_START_COUNT = 4624;
 const MAX_SUPPLY = "1,000,000,000";
 // 修改点 1：将 10 分钟缩短为 5 分钟，让数据更新感更强
 const AUTO_SYNC_INTERVAL = 300000; 
