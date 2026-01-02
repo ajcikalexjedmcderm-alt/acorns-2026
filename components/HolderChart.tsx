@@ -52,11 +52,8 @@ const HolderChart: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* 修复关键点：
-          将原来的 flex-1 改为明确的 h-[320px]。
-          这解决了 "width(-1) and height(-1)" 的渲染报错。
-      */}
-      <div className="w-full h-[320px]">
+      {/* 使用 style 强制固定高度，解决 ResponsiveContainer 报错 */}
+      <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
