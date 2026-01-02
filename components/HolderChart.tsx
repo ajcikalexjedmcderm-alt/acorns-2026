@@ -25,8 +25,8 @@ const HolderChart: React.FC<Props> = ({ data }) => {
       default: return data;
     }
 
+    // 过滤数据并确保有足够的点用于显示
     const filtered = data.filter(d => d.fullDate && d.fullDate.getTime() > cutoff);
-    // 确保至少有数据点显示，如果没有则显示最后20个
     return filtered.length > 1 ? filtered : data.slice(-20);
   }, [data, range]);
 
@@ -53,7 +53,7 @@ const HolderChart: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* --- 核心修复：直接使用 style 锁定 350px 高度 --- */}
+      {/* 核心修复：直接使用内联 style 指定 350px 高度，彻底解决控制台报错 */}
       <div style={{ width: '100%', height: '350px', minHeight: '350px', position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -96,7 +96,6 @@ const HolderChart: React.FC<Props> = ({ data }) => {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      {/* --- 修复结束 --- */}
     </div>
   );
 };
