@@ -70,8 +70,8 @@ const App: React.FC = () => {
     }));
   }, []);
 
+  // --- 修复版代码开始 ---
   const syncWithRealData = useCallback(async () => {
-    if (isSyncing) return;
     setIsSyncing(true);
     setSyncError(null);
     try {
@@ -83,7 +83,7 @@ const App: React.FC = () => {
             return createFlatHistory(data.count);
           }
           const last = prev[prev.length - 1];
-          // Prevent duplicate entries if the count hasn't changed or it's too soon
+          // 30秒内不重复添加数据点
           if (last && last.count === data.count && (new Date().getTime() - last.fullDate.getTime() < 30000)) {
             return prev;
           }
@@ -101,18 +101,21 @@ const App: React.FC = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing]);
+  }, []); // 这里的空数组是防止死循环的关键
 
-  // Initial fetch on mount and then auto-sync every 10 minutes
+  // 挂载时执行一次，并设置10分钟自动刷新
   useEffect(() => {
     syncWithRealData();
     const interval = setInterval(syncWithRealData, AUTO_SYNC_INTERVAL);
     return () => clearInterval(interval);
   }, [syncWithRealData]);
 
+  // 当 history 更新时，计算统计数据
   useEffect(() => {
     calculateStats(history);
   }, [history, calculateStats]);
+  // --- 修复版代码结束 ---
+   
 
   const activityLevel = stats.change1h !== 0 ? 'High' : (stats.change4h !== 0 ? 'Moderate' : 'Stable');
 
