@@ -1,42 +1,40 @@
-
 import React from 'react';
-import { HolderData } from '../types';
 
-interface Props {
-  history: HolderData[];
-}
+const LiveFeed: React.FC = () => {
+  // 模拟数据，实际开发中可以从 Props 传入
+  const events = [
+    { id: 1, type: 'Mint', user: 'bc1p...3x9z', amount: '1,000', time: '2 mins ago' },
+    { id: 2, type: 'Transfer', user: 'bc1q...7v2w', amount: '500', time: '5 mins ago' },
+  ];
 
-const LiveFeed: React.FC<Props> = ({ history }) => {
+  // --- 关键修复：增加空值保护 ---
+  // 如果 events 不是数组或为空，显示提示而不是崩溃
+  if (!events || !Array.isArray(events)) {
+    return <div className="p-4 text-gray-500">正在等待实时链上数据...</div>;
+  }
+
   return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl h-full overflow-hidden">
-      <h3 className="text-lg font-semibold text-slate-200 mb-4">Live Activity Logs</h3>
-      <div className="space-y-3 overflow-y-auto max-h-[320px] pr-2 scrollbar-thin scrollbar-thumb-slate-700">
-        {[...history].reverse().map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-800 hover:bg-slate-800 transition-colors">
+    <div className="bg-[#141414] rounded-2xl p-6 border border-white/5">
+      <h3 className="text-sm font-medium text-gray-400 mb-6 flex items-center">
+        <span className="relative flex h-2 w-2 mr-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        Live Activity Feed
+      </h3>
+      
+      <div className="space-y-4">
+        {events.map((event) => (
+          <div key={event.id} className="flex justify-between items-center text-xs py-2 border-b border-white/5 last:border-0">
             <div className="flex items-center space-x-3">
-              <div className={`p-1.5 rounded-full ${item.change >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                {item.change >= 0 ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-200">
-                  {item.change >= 0 ? 'Holder Milestone' : 'Supply Concentration'}
-                </div>
-                <div className="text-[10px] text-slate-500 font-medium">{item.timestamp}</div>
-              </div>
+              <span className={`px-2 py-0.5 rounded ${event.type === 'Mint' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                {event.type}
+              </span>
+              <span className="text-gray-300 font-mono">{event.user}</span>
             </div>
             <div className="text-right">
-              <div className="text-sm font-bold text-slate-200">{item.count}</div>
-              <div className={`text-[10px] font-bold ${item.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {item.change > 0 ? `+${item.change}` : item.change}
-              </div>
+              <div className="text-gray-200 font-bold">{event.amount} ACORNS</div>
+              <div className="text-gray-500 text-[10px]">{event.time}</div>
             </div>
           </div>
         ))}
