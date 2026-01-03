@@ -1,36 +1,40 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { getAIInsights } from '../services/gemini';
 import { HolderData, InsightReport } from '../types';
 
 interface Props {
-  history: HolderData[];
+  // 允许 history 为空，增加组件健壮性
+  history?: HolderData[];
 }
 
-const GeminiAnalyst: React.FC<Props> = ({ history }) => {
+const GeminiAnalyst: React.FC<Props> = ({ history = [] }) => {
   const [report, setReport] = useState<InsightReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const lastProcessedLength = useRef(0); // Tracks history length when last analyzed
+  const lastProcessedLength = useRef(0);
 
+  // 1. 获取分析的函数
   const fetchAnalysis = async () => {
-    if (loading || history.length < 2) return; // Need at least 2 points to show a trend
+    // 防御逻辑：如果没有 history 或长度不足，不执行
+    if (!history || history.length < 2 || loading) return; 
+    
     setLoading(true);
     try {
       const result = await getAIInsights(history);
       setReport(result);
       lastProcessedLength.current = history.length;
     } catch (err) {
-      console.error(err);
+      console.error("AI 分析失败:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial analysis on load if data exists.
-  // Subsequent automatic analysis when history grows by 5 new data points.
+  // 2. 自动触发分析逻辑
   useEffect(() => {
+    if (!history) return;
+
     const minDataPointsForAnalysis = 5;
-    const updateFrequency = 5; // Re-analyze every 5 new data points
+    const updateFrequency = 5;
 
     const hasEnoughData = history.length >= minDataPointsForAnalysis;
     const isInitialLoad = lastProcessedLength.current === 0 && hasEnoughData;
@@ -39,7 +43,7 @@ const GeminiAnalyst: React.FC<Props> = ({ history }) => {
     if (hasEnoughData && (isInitialLoad || hasSignificantGrowth)) {
       fetchAnalysis();
     }
-  }, [history.length]); // Re-run effect when history length changes
+  }, [history?.length]); // 使用可选链
 
   return (
     <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl h-full">
@@ -54,7 +58,7 @@ const GeminiAnalyst: React.FC<Props> = ({ history }) => {
         </div>
         <button 
           onClick={fetchAnalysis}
-          disabled={loading || history.length < 2}
+          disabled={loading || !history || history.length < 2}
           className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold rounded-lg border border-indigo-500/20 transition-all active:scale-95 disabled:opacity-30"
         >
           {loading ? 'Thinking...' : 'Refresh AI'}
@@ -97,7 +101,7 @@ const GeminiAnalyst: React.FC<Props> = ({ history }) => {
           <svg className="w-12 h-12 text-slate-800 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p className="text-slate-500 text-sm">Fetch data first to generate AI insights...</p>
+          <p className="text-slate-500 text-sm">Waiting for more data points ({history?.length || 0}/5)...</p>
         </div>
       )}
     </div>
