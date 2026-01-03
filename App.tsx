@@ -19,7 +19,7 @@ const App: React.FC = () => {
     console.log("正在尝试获取 UniSat 数据...");
     try {
       // 获取 ACORNS BRC-20 信息
-      const response = await fetch('https://open-api.unisat.io/v1/indexer/brc20/acorns/info');
+      const response = await fetch('https://open-api.unisat.io/v1/indexer/brc20/ACORNS/info');
       const result = await response.json();
       
       if (result && result.data) {
