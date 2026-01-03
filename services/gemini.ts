@@ -1,56 +1,86 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"; // 修正 import
+import { GoogleGenerativeAI } from "@google/generative-ai"; 
 import { HolderData, InsightReport } from "../types";
 
-// 正确读取 Vite 环境变量
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""; 
+// 优先读取环境变量，如果没有，则使用你提供的备用 Key（建议后续在 Vercel 后台设置环境变量）
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyATO9LQyQpMvAeBUy3s8Wa2pTXmPSbVb78"; 
 const UNISAT_KEY = import.meta.env.VITE_UNISAT_API_KEY || "";
 
+/**
+ * 从 UniSat 抓取最新的持有人数据
+ */
 export const fetchLatestHolderCount = async (): Promise<{ count: number; source: string } | null> => {
   try {
-    if (!UNISAT_KEY) throw new Error("缺少 UniSat API Key");
+    // 如果没有配置 UniSat Key，跳过抓取使用保底数据
+    if (!UNISAT_KEY) {
+      console.warn("未检测到 VITE_UNISAT_API_KEY，使用模拟数据");
+      return { count: 4624, source: "保底数据" };
+    }
 
     const response = await fetch('https://open-api.unisat.io/v1/indexer/brc20/acorns/info', {
-      headers: { 'Authorization': `Bearer ${UNISAT_KEY}` }
+      headers: { 
+        'Authorization': `Bearer ${UNISAT_KEY}`,
+        'Accept': 'application/json'
+      }
     });
+
+    if (!response.ok) throw new Error(`UniSat 响应错误: ${response.status}`);
 
     const result = await response.json();
     
-    // 鲁棒解析：处理多种可能的 UniSat 返回结构
-    const count = result?.data?.holdersCount ?? result?.data?.holders ?? result?.holdersCount;
+    // 深度解析：适配 UniSat 可能的多种返回格式
+    const count = result?.data?.holdersCount ?? result?.data?.holders ?? result?.holdersCount ?? result?.data?.minted;
     
-    if (count !== undefined) {
+    if (count !== undefined && count !== null) {
       return { count: Number(count), source: "UniSat Indexer" };
     }
-    throw new Error("未能解析持有数");
+    
+    throw new Error("UniSat 返回数据中未包含有效持有数");
   } catch (error) {
     console.error("UniSat 同步失败:", error);
-    return { count: 4624, source: "保底数据" };
+    // 返回一个默认值，防止前端 UI 崩溃
+    return { count: 4624, source: "保底数据 (同步异常)" };
   }
 };
 
+/**
+ * 调用 Gemini 获取 AI 投研见解
+ */
 export const getAIInsights = async (history: HolderData[]): Promise<InsightReport> => {
   try {
     if (!GEMINI_KEY) throw new Error("缺少 Gemini API Key");
 
-    // 正确初始化 Gemini SDK
+    // 初始化 Gemini 实例
     const genAI = new GoogleGenerativeAI(GEMINI_KEY);
+    // 使用稳定版模型
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = `分析 ACORNS (BRC-20) 持有人趋势。数据: ${JSON.stringify(history.slice(-10))}。
-    请仅以 JSON 格式返回，包含字段: sentiment (Bullish/Neutral/Bearish), summary, recommendation, keyObservation。`;
+    const prompt = `你是一个专业的 Web3 投研专家。
+    分析以下 ACORNS (BRC-20) 资产的持有人波动趋势数据: ${JSON.stringify(history.slice(-15))}。
+    
+    请严格按照以下 JSON 格式回复（不要包含任何解释性文字）：
+    {
+      "sentiment": "Bullish" | "Neutral" | "Bearish",
+      "summary": "一句话概括趋势",
+      "recommendation": "投资操作建议",
+      "keyObservation": "最关键的一个发现"
+    }`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text().replace(/```json|```/gi, "").trim();
+    const text = response.text();
     
-    return JSON.parse(text);
+    // 强化版 JSON 提取逻辑：去除 AI 可能添加的 Markdown 标签
+    const jsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    return JSON.parse(jsonString);
   } catch (error) {
-    console.error("AI 分析失败:", error);
+    console.error("AI 分析服务异常:", error);
+    // 发生错误时返回默认结构，确保页面不白屏
     return {
       sentiment: 'Neutral',
-      summary: '正在同步链上真实数据...',
-      recommendation: '关注 4624 支撑位。',
-      keyObservation: '系统正在切换至实时数据流。'
+      summary: '由于链上数据同步中，AI 暂时无法给出深度见解。',
+      recommendation: '建议观察 4624 持有人支撑位。',
+      keyObservation: '当前系统正处于数据冷启动阶段。'
     };
   }
 };
