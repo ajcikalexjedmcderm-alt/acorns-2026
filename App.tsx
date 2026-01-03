@@ -71,25 +71,22 @@ const App: React.FC = () => {
       <Header isSyncing={isSyncing} onRefresh={fetchData} />
       
       <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 左侧主要内容 */}
         <div className="lg:col-span-2 space-y-8">
-          {/* 传入 stats，StatsOverview 内部已包含 null 保护 */}
-          <StatsOverview stats={stats} />
+          {/* 只有 stats 有值时才渲染这个组件 */}
+          {stats ? <StatsOverview stats={stats} /> : <div className="p-8 text-center text-gray-500">正在加载数据...</div>}
           
-          {/* 重点修复：给父容器设置 relative 和固定高度。
-              内部图表 div 使用 absolute 填充，解决 width(-1) 渲染报错 
-          */}
           <div className="relative bg-[#141414] rounded-2xl p-6 border border-white/5 h-[450px]">
              <h3 className="text-sm font-medium text-gray-400 mb-6">持有人增长趋势 (实时监控)</h3>
              <div className="absolute left-6 right-6 bottom-6 top-16">
-                <HolderChart data={holderHistory} />
+                {/* 确保有历史数据再渲染图表 */}
+                {holderHistory.length > 0 ? <HolderChart data={holderHistory} /> : <div className="text-center py-20 text-gray-600">等待趋势数据...</div>}
              </div>
           </div>
           
-          <LiveFeed />
+          {/* 这里很有可能是崩溃点，我们可以暂时注释掉它来测试 */}
+          <LiveFeed /> 
         </div>
 
-        {/* 右侧 AI 分析 */}
         <div className="lg:col-span-1">
           <GeminiAnalyst 
             apiKey={API_KEY} 
