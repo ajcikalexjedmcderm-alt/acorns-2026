@@ -1,33 +1,65 @@
-import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React from 'react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { HolderData } from '../types';
 
-interface Props { data: HolderData[]; }
+interface Props {
+  // 确保数据可以是 null 或 undefined
+  data: HolderData[] | null; 
+}
 
 const HolderChart: React.FC<Props> = ({ data }) => {
-  const filteredData = useMemo(() => data.slice(-24), [data]);
+  // --- 修复点 1: 解决 "e is not iterable" 错误 ---
+  // 如果 data 为空或不是数组，返回加载状态，防止 Recharts 崩溃
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full bg-slate-900/50 rounded-2xl border border-slate-800">
+        <div className="text-slate-500 text-sm animate-pulse">正在准备历史趋势图...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl min-h-[450px]">
-      <h3 className="text-lg font-semibold text-slate-200 mb-6">持有人增长历史 (实时)</h3>
-      {/* 核心修复：外层 div 强制给定 350px 高度 */}
-      <div style={{ width: '100%', height: '350px', position: 'relative' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={filteredData}>
-            <defs>
-              <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-            <XAxis dataKey="timestamp" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
-            <YAxis domain={['auto', 'auto']} orientation="right" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155' }} />
-            <Area type="monotone" dataKey="count" stroke="#f59e0b" strokeWidth={3} fill="url(#colorCount)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+    // --- 修复点 2: 解决图表高度为 -1 的错误 ---
+    // 必须在这里设置一个明确的 min-height 或固定高度
+    <div className="w-full h-[400px] min-h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <XAxis 
+            dataKey="timestamp" 
+            stroke="#64748b" 
+            fontSize={10}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis 
+            stroke="#64748b" 
+            fontSize={10}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => value.toLocaleString()}
+            domain={['auto', 'auto']}
+          />
+          <Tooltip 
+            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+            itemStyle={{ color: '#3b82f6', fontSize: '12px' }}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="count" 
+            stroke="#3b82f6" 
+            strokeWidth={2}
+            fillOpacity={1} 
+            fill="url(#colorCount)" 
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 };
