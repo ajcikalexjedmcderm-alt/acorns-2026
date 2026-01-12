@@ -6,12 +6,15 @@ import LiveFeed from './components/LiveFeed';
 import GeminiAnalyst from './components/GeminiAnalyst';
 import { HolderData, Stats } from './types';
 
+// 你的 GitHub 数据直链
+const GITHUB_DATA_URL = 'https://raw.githubusercontent.com/ajcikalexjedmcderm-alt/acorns-2026/refs/heads/main/acorns_data.json';
+
 const App: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [holderHistory, setHolderHistory] = useState<HolderData[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 模拟数据的函数：当 API 报错时调用
+  // 模拟数据的函数：当 GitHub 数据还没生成或读取失败时调用
   const useMockData = () => {
     const mockStats: Stats = {
       currentHolders: 4624,
@@ -23,7 +26,7 @@ const App: React.FC = () => {
     };
     setStats(mockStats);
     
-    // 生成过去几小时的模拟趋势
+    // 生成模拟趋势
     const mockHistory: HolderData[] = Array.from({ length: 10 }).map((_, i) => ({
       timestamp: `${10 + i}:00`,
       count: 4500 + (i * 15),
@@ -36,41 +39,67 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch('https://open-api.unisat.io/v1/indexer/brc20/ACORNS/info');
-      const result = await response.json();
+      // 1. 从 GitHub 获取 JSON 文件
+      const response = await fetch(GITHUB_DATA_URL);
       
-      if (result && result.code === 0 && result.data) {
-        const raw = result.data;
-        const newStats: Stats = {
-          currentHolders: Number(raw.holdersCount || 0),
-          change1h: Number(raw.change1h || 0),
-          change4h: Number(raw.change4h || 0),
-          change24h: Number(raw.change24h || 0),
-          change7d: Number(raw.change7d || 0),
-          ath: Number(raw.ath || 0)
-        };
-        setStats(newStats);
-        setHolderHistory(prev => [...prev, {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          count: newStats.currentHolders,
-          change: newStats.change1h,
-          fullDate: new Date()
-        }].slice(-20));
-      } else {
-        console.warn("API 报错，启用模拟数据展示模式:", result.msg);
-        if (holderHistory.length === 0) useMockData();
+      // 检查请求是否成功
+      if (!response.ok) {
+        throw new Error('无法连接到 GitHub 数据源');
       }
+
+      const rawData = await response.json();
+      
+      // 2. 检查数据格式 (假设爬虫保存的是一个数组)
+      if (Array.isArray(rawData) && rawData.length > 0) {
+        
+        // 3. 转换数据格式以适配图表
+        // 注意：这里假设你的 JSON 里的字段是 'holders' 和 'timestamp'
+        // 如果你的爬虫存的字段名不一样（比如叫 count），请在这里修改
+        const formattedHistory: HolderData[] = rawData.map((item: any) => ({
+          timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          count: Number(item.holders), // 确保是数字
+          change: 0, // 历史数据的单次变化暂时设为0，或者你可以计算 item.holders - prev.holders
+          fullDate: new Date(item.timestamp)
+        }));
+
+        setHolderHistory(formattedHistory);
+
+        // 4. 计算统计数据 (Stats)
+        const latest = formattedHistory[formattedHistory.length - 1]; // 最新一条
+        const first = formattedHistory[0]; // 最早一条 (用来粗略计算涨幅)
+
+        // 简单的计算逻辑：对比最新和最早的数据
+        const totalChange = latest.count - first.count;
+
+        const newStats: Stats = {
+          currentHolders: latest.count,
+          change1h: 0,   // 如果数据够多，可以算出1小时前的对比
+          change4h: 0,
+          change24h: totalChange, // 暂时显示总变化量
+          change7d: 0,
+          ath: Math.max(...formattedHistory.map(h => h.count)) // 自动算出历史最高
+        };
+        
+        setStats(newStats);
+        console.log("成功加载 GitHub 数据:", formattedHistory.length, "条记录");
+
+      } else {
+        console.warn("GitHub 数据为空或格式不对，使用模拟数据");
+        useMockData();
+      }
+
     } catch (error) {
-      console.error("请求失败，启用模拟数据:", error);
-      if (holderHistory.length === 0) useMockData();
+      console.error("请求 GitHub 失败，启用模拟数据:", error);
+      useMockData();
     } finally {
       setIsSyncing(false);
     }
-  }, [holderHistory.length]);
+  }, []);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000); // 每分钟尝试刷新一次
+    // GitHub 的更新频率没那么高，可以改成 5 分钟刷新一次
+    const interval = setInterval(fetchData, 300000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -81,12 +110,12 @@ const App: React.FC = () => {
         <div className="lg:col-span-2 space-y-8">
           <StatsOverview stats={stats} />
           <div className="bg-[#141414] rounded-2xl p-6 border border-white/5 h-[450px]">
+             {/* 传入完整的历史数据给图表 */}
              <HolderChart data={holderHistory} />
           </div>
           <LiveFeed />
         </div>
         <div className="lg:col-span-1">
-          {/* 确保传给 GeminiAnalyst 的属性名是 history */}
           <GeminiAnalyst history={holderHistory} />
         </div>
       </main>
