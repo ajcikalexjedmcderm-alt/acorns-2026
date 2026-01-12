@@ -2,8 +2,10 @@ name: Acorns Monitor
 
 on:
   workflow_dispatch:      # 允许手动按钮触发
-  schedule:               # 👇 自动定时任务
-    - cron: '*/10 * * * *'  # 每10分钟触发一次
+  schedule:
+    # 👇 修改为：从每小时第3分钟开始，每隔10分钟运行一次
+    # 时间点：:03, :13, :23, :33, :43, :53
+    - cron: '3,13,23,33,43,53 * * * *'
 
 permissions:
   contents: write
@@ -23,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # 👇 关键修改：这里必须加上 selenium
+          # 必须包含 selenium 和 requests
           pip install selenium requests
 
       - name: Run scraper
