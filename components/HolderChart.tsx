@@ -1,27 +1,18 @@
 import React from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { HolderData } from '../types';
 
-interface Props {
-  // 确保数据可以是 null 或 undefined
-  data: HolderData[] | null; 
+interface HolderChartProps {
+  data: HolderData[];
 }
 
-const HolderChart: React.FC<Props> = ({ data }) => {
-  // --- 修复点 1: 解决 "e is not iterable" 错误 ---
-  // 如果 data 为空或不是数组，返回加载状态，防止 Recharts 崩溃
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-slate-900/50 rounded-2xl border border-slate-800">
-        <div className="text-slate-500 text-sm animate-pulse">正在准备历史趋势图...</div>
-      </div>
-    );
-  }
-
+const HolderChart: React.FC<HolderChartProps> = ({ data }) => {
   return (
-    // --- 修复点 2: 解决图表高度为 -1 的错误 ---
-    // 必须在这里设置一个明确的 min-height 或固定高度
-    <div className="w-full h-[400px] min-h-[300px]">
+    <div className="w-full h-full">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-gray-400 text-sm font-medium">持有人趋势图</h3>
+      </div>
+      
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
@@ -30,25 +21,27 @@ const HolderChart: React.FC<Props> = ({ data }) => {
               <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
           <XAxis 
             dataKey="timestamp" 
-            stroke="#64748b" 
-            fontSize={10}
+            stroke="#666" 
+            fontSize={12}
             tickLine={false}
             axisLine={false}
+            minTickGap={30} // 防止X轴文字挤在一起
           />
           <YAxis 
-            stroke="#64748b" 
-            fontSize={10}
+            stroke="#666" 
+            fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => value.toLocaleString()}
-            domain={['auto', 'auto']}
+            domain={['auto', 'auto']} // 自动缩放范围
+            allowDecimals={false}     // 👈【关键修改】强制不显示小数
           />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
-            itemStyle={{ color: '#3b82f6', fontSize: '12px' }}
+            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+            itemStyle={{ color: '#fff' }}
+            labelStyle={{ color: '#9ca3af' }}
           />
           <Area 
             type="monotone" 
