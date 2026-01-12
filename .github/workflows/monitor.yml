@@ -2,7 +2,7 @@ name: Acorns Monitor
 
 on:
   workflow_dispatch:      # 允许手动按钮触发
-  schedule:               # 👇 必须加上这段代码才能自动运行！
+  schedule:               # 👇 自动定时任务
     - cron: '*/10 * * * *'  # 每10分钟触发一次
 
 permissions:
@@ -23,7 +23,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4
+          # 👇 关键修改：这里必须加上 selenium
+          pip install selenium requests
 
       - name: Run scraper
         run: python acorns_scraper.py
