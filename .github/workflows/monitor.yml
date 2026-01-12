@@ -8,6 +8,11 @@ on:
   # 允许手动点击按钮触发
   workflow_dispatch:
 
+# === 关键修改：添加写入权限 ===
+permissions:
+  contents: write
+# ===========================
+
 jobs:
   build:
     runs-on: ubuntu-latest
