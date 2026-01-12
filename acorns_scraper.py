@@ -1,9 +1,7 @@
 import time
 import json
-import schedule
 import os
 import sys
-import random
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -14,7 +12,6 @@ from selenium.webdriver.support import expected_conditions as EC
 # 配置部分
 URL = "https://bestinslot.xyz/brc2.0/acorns?mode=clob"
 DATA_FILE = "acorns_data.json"
-CHECK_INTERVAL_MINUTES = 10
 
 def get_holders_count():
     """
@@ -57,15 +54,18 @@ def get_holders_count():
                 val = int(clean_text)
                 print(f"发现数字候选: {text}")
                 
+                # 简单的过滤逻辑：假设 holders 数量肯定大于 100
                 if val > 100: 
                     found_val = val
                     try:
+                        # 尝试向上查找父元素确认语义
                         parent_text = span.find_element(By.XPATH, "./../..").text
                         if "Holder" in parent_text:
                             found_val = val
                             break 
                     except:
                         pass
+                    # 如果找到了看起来合理的数字，也可以先暂存
                     if found_val: 
                          break
 
@@ -93,6 +93,7 @@ def save_data(holders):
     }
 
     data = []
+    # 读取现有数据
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -101,6 +102,7 @@ def save_data(holders):
             pass
 
     data.append(entry)
+    # 只保留最近 10000 条
     if len(data) > 10000:
         data = data[-10000:]
 
@@ -115,24 +117,8 @@ def job():
         save_data(count)
 
 if __name__ == "__main__":
-    # 检测是否在 GitHub Actions 环境中运行
-    is_github_action = os.getenv("GITHUB_ACTIONS") == "true"
-    
-    if is_github_action:
-        print("检测到云端环境 (GitHub Actions)，执行单次任务...")
-        job()
-        print("任务完成，退出。")
-        sys.exit(0) # 正常退出，不进行循环
-    else:
-        # 本地模式：保持循环
-        print(f"检测到本地环境，启动循环监控 (PID: {os.getpid()})")
-        print(f"频率: 每 {CHECK_INTERVAL_MINUTES} 分钟")
-        
-        # 立即运行一次
-        job()
-        
-        schedule.every(CHECK_INTERVAL_MINUTES).minutes.do(job)
-        
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+    # 无论是在本地还是 GitHub Actions，都只执行一次
+    # 因为 GitHub Actions 的 cron 会负责定时调用
+    print(f"[{datetime.now()}] 启动单次抓取任务...")
+    job()
+    print("任务完成，退出。")
