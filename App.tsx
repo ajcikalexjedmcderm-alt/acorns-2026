@@ -129,4 +129,37 @@ const App: React.FC = () => {
           <div className="bg-[#141414] rounded-2xl p-6 border border-white/5 h-[450px] relative flex flex-col">
              <div className="absolute top-6 right-6 flex gap-2 z-10">
                <RangeButton range="10m" label="10分钟" />
-               <RangeButton range="1h"
+               <RangeButton range="1h" label="1小时" />
+               <RangeButton range="4h" label="4小时" />
+               <RangeButton range="24h" label="1天" />
+               <RangeButton range="7d" label="7天" />
+               <RangeButton range="all" label="全部" />
+             </div>
+
+             <div className="flex-1 mt-8"> 
+               {filteredHistory.length > 0 ? (
+                 <HolderChart data={filteredHistory} />
+               ) : (
+                 <div className="flex h-full items-center justify-center text-gray-500 text-sm">
+                   该时间段内暂无数据
+                 </div>
+               )}
+             </div>
+          </div>
+          
+          {/* LiveFeed 通常需要显示最新的在上面，所以这里我们传原始的 rawData (倒序的) 
+              或者把 fullHistory 再 reverse 回去。
+              由于 fullHistory 已经被我们翻转成 [旧->新] 了，
+              传给 LiveFeed 时最好再 .reverse() 一次变成 [新->旧] */}
+          <LiveFeed data={[...fullHistory].reverse()} />
+        </div>
+        
+        <div className="lg:col-span-1">
+          <GeminiAnalyst history={fullHistory} />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;
