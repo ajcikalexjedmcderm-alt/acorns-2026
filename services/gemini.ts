@@ -1,9 +1,31 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"; 
 import { HolderData, InsightReport } from "../types";
 
-// 优先读取环境变量，如果没有，则使用你提供的备用 Key（建议后续在 Vercel 后台设置环境变量）
+// 优先读取环境变量，如果没有，则使用你提供的备用 Key
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyATO9LQyQpMvAeBUy3s8Wa2pTXmPSbVb78"; 
 const UNISAT_KEY = import.meta.env.VITE_UNISAT_API_KEY || "";
+
+/**
+ * 【新增功能】读取 GitHub Action 生成的日志文件
+ * 🟢 关键修复：添加 ?t=时间戳，强制浏览器不使用缓存，获取最新数据
+ */
+export const fetchMonitorData = async (): Promise<any[]> => {
+  try {
+    // adding a timestamp query param to bypass cache
+    const timestamp = new Date().getTime();
+    const response = await fetch(`./acorns_data.json?t=${timestamp}`);
+    
+    if (!response.ok) {
+      throw new Error("无法读取数据文件");
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("读取本地日志失败:", error);
+    return [];
+  }
+};
 
 /**
  * 从 UniSat 抓取最新的持有人数据
@@ -54,8 +76,11 @@ export const getAIInsights = async (history: HolderData[]): Promise<InsightRepor
     // 使用稳定版模型
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    // 截取最近 15 条数据进行分析，避免 Token 超限
+    const recentHistory = history.slice(0, 15);
+
     const prompt = `你是一个专业的 Web3 投研专家。
-    分析以下 ACORNS (BRC-20) 资产的持有人波动趋势数据: ${JSON.stringify(history.slice(-15))}。
+    分析以下 ACORNS (BRC-20) 资产的持有人波动趋势数据: ${JSON.stringify(recentHistory)}。
     
     请严格按照以下 JSON 格式回复（不要包含任何解释性文字）：
     {
