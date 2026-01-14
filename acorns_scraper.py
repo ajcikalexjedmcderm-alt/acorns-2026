@@ -9,9 +9,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# 配置部分
+# ================= 配置部分 =================
 URL = "https://bestinslot.xyz/brc2.0/acorns?mode=clob"
 DATA_FILE = "acorns_data.json"
+# ===========================================
 
 def get_holders_count():
     """
@@ -20,11 +21,10 @@ def get_holders_count():
     print(f"[{datetime.now()}] 正在启动浏览器抓取...")
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # 无头模式，不显示界面
+    chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage") # 解决云端内存不足问题
-    # 模拟真实浏览器 User-Agent
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     driver = webdriver.Chrome(options=chrome_options)
@@ -52,7 +52,6 @@ def get_holders_count():
             
             if clean_text.isdigit():
                 val = int(clean_text)
-                print(f"发现数字候选: {text}")
                 
                 # 简单的过滤逻辑：假设 holders 数量肯定大于 100
                 if val > 100: 
@@ -74,51 +73,104 @@ def get_holders_count():
             print(f"🎉 成功提取 Holders: {holders_count}")
         else:
             print("⚠️ 未找到符合格式的数字。")
+            raise Exception("Elements found but no valid number extracted")
 
     except Exception as e:
-        print(f"抓取过程出错: {e}")
+        # 这里只抛出异常，让主函数去捕获和记录
+        raise e
     finally:
         driver.quit()
         
     return holders_count
 
-def save_data(holders):
-    if holders is None:
-        return
-
-    entry = {
-        "timestamp": int(time.time() * 1000),
-        "holders": holders,
-        "date_str": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-
+def save_log(status, holders, error_msg=None):
+    """
+    核心保存逻辑：
+    - 读取旧数据
+    - 对比数据变化 (计算 Diff)
+    - 写入新日志
+    """
     data = []
-    # 读取现有数据
+    
+    # 1. 读取现有数据
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except:
-            pass
+            data = []
 
-    data.append(entry)
-    # 只保留最近 10000 条
-    if len(data) > 10000:
-        data = data[-10000:]
+    # 2. 准备新条目
+    timestamp_str = datetime.now().strftime("%H:%M") # 显示用的短时间
+    full_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    entry = {
+        "status": status,  # "CHECK" or "ERROR"
+        "holders": holders if holders else "N/A",
+        "timestamp": full_date,
+        "time_display": timestamp_str,
+        "message": "System Sync" # 默认消息
+    }
 
+    # 3. 如果是成功获取数据，进行对比逻辑
+    if status == "CHECK" and holders:
+        # 寻找上一次成功的记录进行对比
+        last_holders = None
+        for log in data:
+            if log.get("holders") and isinstance(log["holders"], int):
+                last_holders = log["holders"]
+                break
+        
+        if last_holders:
+            diff = holders - last_holders
+            if diff > 0:
+                entry["message"] = f"+{diff} New"
+                # 你可以在前端根据这个 message 内容变色
+            elif diff < 0:
+                entry["message"] = f"{diff} Left"
+                # 这里前端通常会标记为红色
+            else:
+                entry["message"] = "System Sync"
+    
+    # 4. 如果是错误状态
+    if status == "ERROR":
+        entry["message"] = error_msg if error_msg else "Sync Failed"
+
+    # 5. 插入到最前面（保证最新的在上面）
+    data.insert(0, entry)
+    
+    # 只保留最近 500 条，防止文件过大
+    if len(data) > 500:
+        data = data[:500]
+
+    # 6. 写入文件
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
     
-    print(f"数据已保存至 {DATA_FILE}")
+    print(f"日志已保存: [{status}] {entry['message']}")
 
-def job():
-    count = get_holders_count()
-    if count:
-        save_data(count)
+def main():
+    print(f"[{datetime.now()}] 启动任务...")
+    
+    try:
+        # 1. 尝试抓取
+        count = get_holders_count()
+        
+        # 2. 抓取成功，保存成功日志
+        if count:
+            save_log("CHECK", count)
+        else:
+            raise Exception("Result is None")
+
+    except Exception as e:
+        # 3. 抓取失败，保存错误日志
+        print(f"❌ 任务失败: {e}")
+        # 尝试读取上一次的 holders 保持数据连续性，或者存 None
+        save_log("ERROR", None, error_msg=str(e)[:50]) # 限制错误信息长度
+        
+        # 关键：退出代码设为 1，告诉 GitHub Action 这一步出错了
+        # (配合 YML 里的 continue-on-error: true 使用)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    # 无论是在本地还是 GitHub Actions，都只执行一次
-    # 因为 GitHub Actions 的 cron 会负责定时调用
-    print(f"[{datetime.now()}] 启动单次抓取任务...")
-    job()
-    print("任务完成，退出。")
+    main()
