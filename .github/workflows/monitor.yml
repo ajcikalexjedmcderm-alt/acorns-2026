@@ -3,9 +3,9 @@ name: Acorns Monitor
 on:
   workflow_dispatch:      # 允许手动按钮触发
   schedule:
-    # 👇 修改为：从每小时第3分钟开始，每隔10分钟运行一次
-    # 时间点：:03, :13, :23, :33, :43, :53
-    - cron: '3,13,23,33,43,53 * * * *'
+    - cron: '3,13,23,33,43,53 * * * *' # 保留作为备用，虽然不准
+  repository_dispatch:    # 👈 【新增】允许外部通过 API 触发
+    types: [trigger-scraper]
 
 permissions:
   contents: write
@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -25,16 +25,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # 必须包含 selenium 和 requests
           pip install selenium requests
 
       - name: Run scraper
+        id: scraper
+        # 即使脚本出错也继续，确保能提交错误日志
+        continue-on-error: true
         run: python acorns_scraper.py
 
       - name: Commit and push if changed
+        # 总是执行提交步骤
+        if: always()
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add acorns_data.json
-          git commit -m "Auto-update holders data" || exit 0
+          # 如果文件没变化（比如脚本挂了且没写入），这里会跳过不报错
+          git commit -m "Auto-update holders data" || echo "No changes to commit"
           git push
