@@ -24,10 +24,9 @@ const App: React.FC = () => {
     if (!data || data.length === 0) return [];
     if (range === 'all') return data;
 
-    const now = new Date();
-    // 注意：这里使用最后一个数据点的时间作为参考，防止数据断更时图表全空
-    const lastDataPoint = data[data.length - 1]?.fullDate || new Date(); 
-    const cutoff = new Date(lastDataPoint);
+    // 获取数据中最新的时间点作为基准，而不是当前系统时间（防止数据停更时图表为空）
+    const latestTime = new Date(data[data.length - 1].fullDate).getTime();
+    const cutoff = new Date(latestTime);
 
     switch (range) {
       case '10m': cutoff.setMinutes(cutoff.getMinutes() - 10); break;
@@ -49,7 +48,7 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      // 🟢 修复 1: 添加时间戳参数，强制浏览器和 CDN 放弃缓存，获取最新数据
+      // 添加时间戳参数，强制浏览器和 CDN 放弃缓存，获取最新数据
       const timestamp = new Date().getTime();
       const fetchUrl = `${GITHUB_DATA_URL}?t=${timestamp}`;
       
@@ -60,27 +59,28 @@ const App: React.FC = () => {
 
       if (Array.isArray(rawData) && rawData.length > 0) {
         
-        // 🟢 修复 2: Python 脚本保存的是 [最新, ..., 最旧]
-        // 但图表需要 [最旧, ..., 最新] 从左到右画
-        // 所以我们必须先 .slice() 复制一份，再 .reverse() 翻转数组
-        const sortedData = rawData.slice().reverse();
+        // 🟢 关键修复：强制按时间升序排序（旧 -> 新）
+        // 这样图表永远是从左（旧）画到右（新）
+        const sortedData = rawData.slice().sort((a: any, b: any) => {
+           return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        });
 
         const formattedHistory: HolderData[] = sortedData.map((item: any) => ({
           timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           count: Number(item.holders),
-          change: 0, // 可以根据需要计算
+          change: 0, 
           fullDate: new Date(item.timestamp)
         }));
 
         setFullHistory(formattedHistory);
 
-        // 现在数组是 [旧 -> 新]，所以最后一个是最新的
+        // 排序后：[0] 是最旧的，[length-1] 是最新的
         const latest = formattedHistory[formattedHistory.length - 1];
-        const first = formattedHistory[0];
+        // 计算 24小时前的对比数据：找到最接近 24h 前的那个点，而不是简单的 index 0
+        const oneDayAgo = new Date(new Date(latest.fullDate).getTime() - 24 * 60 * 60 * 1000);
+        const prevDayData = formattedHistory.find(h => h.fullDate >= oneDayAgo) || formattedHistory[0];
         
-        // 计算 24h 变化 (简单版：拿最新的减去列表里第一条，或者更严谨的查找)
-        // 这里的 first.count 实际上是历史记录里最老的一条
-        const change24h = latest.count - first.count;
+        const change24h = latest.count - prevDayData.count;
 
         setStats({
           currentHolders: latest.count,
@@ -100,7 +100,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    // 每 30 秒轮询一次（既然已经是自动化了，可以稍微频繁点）
+    // 每 30 秒轮询一次
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -147,10 +147,7 @@ const App: React.FC = () => {
              </div>
           </div>
           
-          {/* LiveFeed 通常需要显示最新的在上面，所以这里我们传原始的 rawData (倒序的) 
-              或者把 fullHistory 再 reverse 回去。
-              由于 fullHistory 已经被我们翻转成 [旧->新] 了，
-              传给 LiveFeed 时最好再 .reverse() 一次变成 [新->旧] */}
+          {/* LiveFeed 列表需要最新的在上面，所以我们将按升序排列的 fullHistory 翻转一下传给它 */}
           <LiveFeed data={[...fullHistory].reverse()} />
         </div>
         
