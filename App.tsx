@@ -25,14 +25,16 @@ const App: React.FC = () => {
     if (range === 'all') return data;
 
     const now = new Date();
-    const cutoff = new Date();
+    // 注意：这里使用最后一个数据点的时间作为参考，防止数据断更时图表全空
+    const lastDataPoint = data[data.length - 1]?.fullDate || new Date(); 
+    const cutoff = new Date(lastDataPoint);
 
     switch (range) {
-      case '10m': cutoff.setMinutes(now.getMinutes() - 10); break;
-      case '1h':  cutoff.setHours(now.getHours() - 1); break;
-      case '4h':  cutoff.setHours(now.getHours() - 4); break;
-      case '24h': cutoff.setHours(now.getHours() - 24); break;
-      case '7d':  cutoff.setDate(now.getDate() - 7); break;
+      case '10m': cutoff.setMinutes(cutoff.getMinutes() - 10); break;
+      case '1h':  cutoff.setHours(cutoff.getHours() - 1); break;
+      case '4h':  cutoff.setHours(cutoff.getHours() - 4); break;
+      case '24h': cutoff.setHours(cutoff.getHours() - 24); break;
+      case '7d':  cutoff.setDate(cutoff.getDate() - 7); break;
     }
 
     return data.filter(item => new Date(item.fullDate) >= cutoff);
@@ -47,29 +49,44 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch(GITHUB_DATA_URL);
+      // 🟢 修复 1: 添加时间戳参数，强制浏览器和 CDN 放弃缓存，获取最新数据
+      const timestamp = new Date().getTime();
+      const fetchUrl = `${GITHUB_DATA_URL}?t=${timestamp}`;
+      
+      const response = await fetch(fetchUrl);
       if (!response.ok) throw new Error('无法连接到 GitHub 数据源');
       
       const rawData = await response.json();
 
       if (Array.isArray(rawData) && rawData.length > 0) {
-        const formattedHistory: HolderData[] = rawData.map((item: any) => ({
+        
+        // 🟢 修复 2: Python 脚本保存的是 [最新, ..., 最旧]
+        // 但图表需要 [最旧, ..., 最新] 从左到右画
+        // 所以我们必须先 .slice() 复制一份，再 .reverse() 翻转数组
+        const sortedData = rawData.slice().reverse();
+
+        const formattedHistory: HolderData[] = sortedData.map((item: any) => ({
           timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           count: Number(item.holders),
-          change: 0,
+          change: 0, // 可以根据需要计算
           fullDate: new Date(item.timestamp)
         }));
 
         setFullHistory(formattedHistory);
 
+        // 现在数组是 [旧 -> 新]，所以最后一个是最新的
         const latest = formattedHistory[formattedHistory.length - 1];
         const first = formattedHistory[0];
         
+        // 计算 24h 变化 (简单版：拿最新的减去列表里第一条，或者更严谨的查找)
+        // 这里的 first.count 实际上是历史记录里最老的一条
+        const change24h = latest.count - first.count;
+
         setStats({
           currentHolders: latest.count,
           change1h: 0, 
           change4h: 0,
-          change24h: latest.count - first.count,
+          change24h: change24h,
           change7d: 0,
           ath: Math.max(...formattedHistory.map(h => h.count))
         });
@@ -83,7 +100,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 300000); 
+    // 每 30 秒轮询一次（既然已经是自动化了，可以稍微频繁点）
+    const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -111,33 +129,4 @@ const App: React.FC = () => {
           <div className="bg-[#141414] rounded-2xl p-6 border border-white/5 h-[450px] relative flex flex-col">
              <div className="absolute top-6 right-6 flex gap-2 z-10">
                <RangeButton range="10m" label="10分钟" />
-               <RangeButton range="1h" label="1小时" />
-               <RangeButton range="4h" label="4小时" />
-               <RangeButton range="24h" label="1天" />
-               <RangeButton range="7d" label="7天" />
-               <RangeButton range="all" label="全部" />
-             </div>
-
-             <div className="flex-1 mt-8"> 
-               {filteredHistory.length > 0 ? (
-                 <HolderChart data={filteredHistory} />
-               ) : (
-                 <div className="flex h-full items-center justify-center text-gray-500 text-sm">
-                   该时间段内暂无数据
-                 </div>
-               )}
-             </div>
-          </div>
-          
-          <LiveFeed data={fullHistory} />
-        </div>
-        
-        <div className="lg:col-span-1">
-          <GeminiAnalyst history={fullHistory} />
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default App;
+               <RangeButton range="1h"
