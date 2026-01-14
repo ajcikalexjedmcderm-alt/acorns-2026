@@ -2,7 +2,7 @@ import time
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta # 👈 引入 timedelta 用来加时间
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -14,11 +14,17 @@ URL = "https://bestinslot.xyz/brc2.0/acorns?mode=clob"
 DATA_FILE = "acorns_data.json"
 # ===========================================
 
+def get_beijing_time():
+    """获取当前 UTC+8 (北京/新加坡) 时间对象"""
+    # GitHub Action 默认是 UTC 时间，所以我们获取 UTC 后 +8 小时
+    return datetime.utcnow() + timedelta(hours=8)
+
 def get_holders_count():
     """
     启动无头浏览器抓取 Holders 数据
     """
-    print(f"[{datetime.now()}] 正在启动浏览器抓取...")
+    current_time = get_beijing_time()
+    print(f"[{current_time}] 正在启动浏览器抓取...")
     
     chrome_options = Options()
     chrome_options.add_argument("--headless") 
@@ -73,6 +79,7 @@ def get_holders_count():
             print(f"🎉 成功提取 Holders: {holders_count}")
         else:
             print("⚠️ 未找到符合格式的数字。")
+            # 这里如果不抛出异常，save_log 会以为成功了但没数字
             raise Exception("Elements found but no valid number extracted")
 
     except Exception as e:
@@ -88,7 +95,7 @@ def save_log(status, holders, error_msg=None):
     核心保存逻辑：
     - 读取旧数据
     - 对比数据变化 (计算 Diff)
-    - 写入新日志
+    - 写入新日志 (使用 UTC+8 时间)
     """
     data = []
     
@@ -100,14 +107,15 @@ def save_log(status, holders, error_msg=None):
         except:
             data = []
 
-    # 2. 准备新条目
-    timestamp_str = datetime.now().strftime("%H:%M") # 显示用的短时间
-    full_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # 2. 准备新条目 (使用 UTC+8 时间)
+    bj_time = get_beijing_time()
+    timestamp_str = bj_time.strftime("%H:%M") # 显示用的短时间
+    full_date = bj_time.strftime("%Y-%m-%d %H:%M:%S")
     
     entry = {
         "status": status,  # "CHECK" or "ERROR"
         "holders": holders if holders else "N/A",
-        "timestamp": full_date,
+        "timestamp": full_date,  # 存入北京时间
         "time_display": timestamp_str,
         "message": "System Sync" # 默认消息
     }
@@ -125,10 +133,8 @@ def save_log(status, holders, error_msg=None):
             diff = holders - last_holders
             if diff > 0:
                 entry["message"] = f"+{diff} New"
-                # 你可以在前端根据这个 message 内容变色
             elif diff < 0:
                 entry["message"] = f"{diff} Left"
-                # 这里前端通常会标记为红色
             else:
                 entry["message"] = "System Sync"
     
@@ -147,10 +153,11 @@ def save_log(status, holders, error_msg=None):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
     
-    print(f"日志已保存: [{status}] {entry['message']}")
+    print(f"日志已保存: [{status}] {entry['message']} (Time: {full_date})")
 
 def main():
-    print(f"[{datetime.now()}] 启动任务...")
+    bj_time = get_beijing_time()
+    print(f"[{bj_time}] 启动任务...")
     
     try:
         # 1. 尝试抓取
@@ -169,7 +176,6 @@ def main():
         save_log("ERROR", None, error_msg=str(e)[:50]) # 限制错误信息长度
         
         # 关键：退出代码设为 1，告诉 GitHub Action 这一步出错了
-        # (配合 YML 里的 continue-on-error: true 使用)
         sys.exit(1)
 
 if __name__ == "__main__":
