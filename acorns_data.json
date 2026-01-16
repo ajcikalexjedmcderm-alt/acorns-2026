@@ -1,6 +1,13 @@
 [
   {
     "status": "CHECK",
+    "holders": 4635,
+    "timestamp": "2026-01-16 15:30:43",
+    "time_display": "15:30",
+    "message": "-1 Left"
+  },
+  {
+    "status": "CHECK",
     "holders": 4636,
     "timestamp": "2026-01-16 15:20:38",
     "time_display": "15:20",
