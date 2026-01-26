@@ -1,5 +1,12 @@
 [
   {
+    "status": "ERROR",
+    "holders": "N/A",
+    "timestamp": "2026-01-26 21:57:34",
+    "time_display": "21:57",
+    "message": "Message: invalid session id: session deleted as th"
+  },
+  {
     "status": "CHECK",
     "holders": 4612,
     "timestamp": "2026-01-26 21:50:44",
@@ -3491,12 +3498,5 @@
     "timestamp": "2026-01-24 00:50:38",
     "time_display": "00:50",
     "message": "-1 Left"
-  },
-  {
-    "status": "CHECK",
-    "holders": 4622,
-    "timestamp": "2026-01-24 00:40:48",
-    "time_display": "00:40",
-    "message": "System Sync"
   }
 ]
