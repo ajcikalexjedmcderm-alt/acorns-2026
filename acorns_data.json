@@ -2,6 +2,13 @@
   {
     "status": "CHECK",
     "holders": 4602,
+    "timestamp": "2026-02-08 20:20:33",
+    "time_display": "20:20",
+    "message": "System Sync"
+  },
+  {
+    "status": "CHECK",
+    "holders": 4602,
     "timestamp": "2026-02-08 20:10:41",
     "time_display": "20:10",
     "message": "System Sync"
@@ -3490,13 +3497,6 @@
     "holders": 4606,
     "timestamp": "2026-02-05 22:10:34",
     "time_display": "22:10",
-    "message": "System Sync"
-  },
-  {
-    "status": "CHECK",
-    "holders": 4606,
-    "timestamp": "2026-02-05 22:00:48",
-    "time_display": "22:00",
     "message": "System Sync"
   }
 ]
