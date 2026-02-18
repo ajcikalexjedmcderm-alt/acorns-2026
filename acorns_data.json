@@ -1,5 +1,12 @@
 [
   {
+    "status": "ERROR",
+    "holders": "N/A",
+    "timestamp": "2026-02-18 12:36:18",
+    "time_display": "12:36",
+    "message": "HTTPConnectionPool(host='localhost', port=51657): "
+  },
+  {
     "status": "CHECK",
     "holders": 4592,
     "timestamp": "2026-02-18 12:20:32",
@@ -3490,13 +3497,6 @@
     "holders": 4593,
     "timestamp": "2026-02-15 13:50:41",
     "time_display": "13:50",
-    "message": "System Sync"
-  },
-  {
-    "status": "CHECK",
-    "holders": 4593,
-    "timestamp": "2026-02-15 13:40:36",
-    "time_display": "13:40",
     "message": "System Sync"
   }
 ]
