@@ -1,5 +1,12 @@
 [
   {
+    "status": "ERROR",
+    "holders": "N/A",
+    "timestamp": "2026-03-25 04:00:23",
+    "time_display": "04:00",
+    "message": "Elements found but no valid number extracted"
+  },
+  {
     "status": "CHECK",
     "holders": 4588,
     "timestamp": "2026-03-25 03:50:43",
@@ -3490,13 +3497,6 @@
     "holders": 4588,
     "timestamp": "2026-03-22 04:40:41",
     "time_display": "04:40",
-    "message": "System Sync"
-  },
-  {
-    "status": "CHECK",
-    "holders": 4588,
-    "timestamp": "2026-03-22 04:37:52",
-    "time_display": "04:37",
     "message": "System Sync"
   }
 ]
