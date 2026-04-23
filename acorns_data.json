@@ -1,5 +1,12 @@
 [
   {
+    "status": "ERROR",
+    "holders": "N/A",
+    "timestamp": "2026-04-23 15:11:20",
+    "time_display": "15:11",
+    "message": "Message: \nStacktrace:\n#0 0x5633636cdafa <unknown>\n"
+  },
+  {
     "status": "CHECK",
     "holders": 4588,
     "timestamp": "2026-04-23 15:00:47",
@@ -3490,13 +3497,6 @@
     "holders": 4588,
     "timestamp": "2026-04-20 11:50:40",
     "time_display": "11:50",
-    "message": "System Sync"
-  },
-  {
-    "status": "CHECK",
-    "holders": 4588,
-    "timestamp": "2026-04-20 11:40:42",
-    "time_display": "11:40",
     "message": "System Sync"
   }
 ]
