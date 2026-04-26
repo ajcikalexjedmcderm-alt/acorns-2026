@@ -2,6 +2,13 @@
   {
     "status": "CHECK",
     "holders": 4579,
+    "timestamp": "2026-04-26 18:30:43",
+    "time_display": "18:30",
+    "message": "System Sync"
+  },
+  {
+    "status": "CHECK",
+    "holders": 4579,
     "timestamp": "2026-04-26 18:29:38",
     "time_display": "18:29",
     "message": "System Sync"
@@ -3491,12 +3498,5 @@
     "timestamp": "2026-04-23 15:20:43",
     "time_display": "15:20",
     "message": "System Sync"
-  },
-  {
-    "status": "ERROR",
-    "holders": "N/A",
-    "timestamp": "2026-04-23 15:11:20",
-    "time_display": "15:11",
-    "message": "Message: \nStacktrace:\n#0 0x5633636cdafa <unknown>\n"
   }
 ]
